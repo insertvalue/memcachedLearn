@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+       http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+
+    <context:component-scan base-package="com.hd"></context:component-scan>
+    <aop:aspectj-autoproxy/>
+    <!-- 装入数据源信息 -->
+    <!--    <bean id="propertyConfigurer"
+    class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer" p:location="classpath:dbConfig.properties"/>-->
+
+    <bean id="propertyConfigurer"  class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <!-- 使用locations属性定义多个配置文件 -->
+        <property name="locations">
+            <list>
+                <value>classpath:dbConfig.properties</value>
+                <!--<value>classpath:memcached.properties</value>-->
+            </list>
+        </property> 
+    </bean>
+    
+    <!-- 启用缓存注解 -->
+<!--    <cache:annotation-driven cache-manager="cacheManager"/>
+    <bean id="cacheManager" class="org.springframework.cache.concurrent.ConcurrentMapCacheManager" />-->
+    
+    <!--注：需要解压simple-spring-memcached.jar，找到simplesm-context.xml放到src目录下-->
+    <import resource="simplesm-context.xml" />
+    <!--memcached配置-->
+    <import resource="xmemcached.xml"/>
+    
+    <!--tomcat jdbc pool数据源配置 -->
+    <bean id="dataSource" class="org.apache.tomcat.jdbc.pool.DataSource"
+          destroy-method="close">
+        <property name="poolProperties">
+            <bean class="org.apache.tomcat.jdbc.pool.PoolProperties">
+                <property name="driverClassName" value="${jdbc.driverClassName}" />
+                <property name="url" value="${jdbc.url}" />
+                <property name="username" value="${jdbc.username}" />
+                <property name="password" value="${jdbc.password}" />
+                <!-- 数据库连接池配置 -->
+                <!-- 初始化连接数量 -->
+                <property name="initialSize" value="30" />
+                <!-- 最大连接数量 -->
+                <property name="maxActive" value="150" />
+                <!-- 最小空闲连接数量 -->
+                <property name="minIdle" value="30" />
+                <property name="removeAbandoned" value="true" />
+                <property name="removeAbandonedTimeout" value="600" />
+                <!-- 验证连接是否有效 -->
+                <property name="validationQuery" value="select 1" />
+                <!-- 验证失败时，是否将连接从池中丢弃 -->
+                <property name="testWhileIdle" value="true" />
+                <!-- 把空闲时间超过minEvictableIdleTimeMillis毫秒的连接断开,直到连接池中的连接数到minIdle为止(毫秒，30分钟) -->
+                <property name="timeBetweenEvictionRunsMillis" value="180000" />
+                <!-- 连接池中连接可空闲的时间（毫秒，5分钟） -->
+                <property name="minEvictableIdleTimeMillis" value="300000" />
+                <!-- 在每次空闲连接回收器线程(如果有)运行时检查的连接数量 -->
+                <property name="numTestsPerEvictionRun" value="5" />
+            </bean>
+        </property>
+    </bean>
+    <!--事务注解-->
+    <tx:annotation-driven />
+    <!-- 事务管理器 -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- sqlSession工厂 -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="mapperLocations">
+            <list>
+                <value>classpath:com/hd/memcachedlearn/mapper/*.xml</value>
+            </list>
+        </property>
+    </bean>
+
+    <!-- sqlSession -->
+    <bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate" scope="prototype">
+        <constructor-arg index="0" ref="sqlSessionFactory"/>
+    </bean>
+
+    <!-- 批量Session -->
+    <bean id="batchSqlSession" class="org.mybatis.spring.SqlSessionTemplate" scope="prototype">
+        <constructor-arg index="0" ref="sqlSessionFactory" />
+        <constructor-arg index="1" value="BATCH" />
+    </bean>
+
+    <!-- 映射器 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.hd.memcachedlearn.dao" />
+        <!-- <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory" />-->
+        <property name="sqlSessionTemplateBeanName" value="sqlSession" />
+    </bean>
+
+    <bean id="taskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+        <!--线程池活跃的线程数-->
+        <property name="corePoolSize" value="30" />
+        <!--线程池最大活跃的线程数-->
+        <property name="maxPoolSize" value="120" />
+        <!--任务队列的最大容量-->
+        <property name="queueCapacity" value="2000" />
+        <!--线程池维护线程所允许的空闲时间-->
+        <property name="keepAliveSeconds" value="60" />
+        <property name="rejectedExecutionHandler">
+            <bean class="java.util.concurrent.ThreadPoolExecutor$CallerRunsPolicy" />
+        </property>
+    </bean>
+    
+    <bean id="springContext" class="com.hd.memcachedlearn.SpringContextUtil"/>
+</beans>

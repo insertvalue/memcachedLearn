@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hd.memcachedlearn.dao.RainDao">
+<!--    <cache type="org.mybatis.caches.memcached.MemcachedCache" />
+    <cache type="org.mybatis.caches.memcached.LoggingMemcachedCache" />-->
+    <resultMap id="result_base" type="com.hd.memcachedlearn.entity.RainHour">
+        <result property="termSn" column="TERM_SN"/>
+        <result property="dataTime" column="DATA_TIME"/>
+        <result property="rainValue" column="RAIN_VALUE"/>
+    </resultMap>
+    <select id="findRainHourList" parameterType="java.util.HashMap" resultMap="result_base" resultType="com.hd.memcachedlearn.entity.RainHour">
+        <include refid="select_sql" />
+        ORDER BY obj.DATA_TIME ASC
+    </select>
+    <sql id="select_sql">
+        SELECT obj.TERM_SN, obj.DATA_TIME,obj.RAIN_VALUE FROM BIZ_RAIN_YEAR obj
+        <include refid="dy_where" />
+    </sql>
+    
+    <sql id="dy_where">
+        <trim prefix="where" prefixOverrides="AND|OR">
+            <if test="null !=termSn and ''!= termSn">
+                AND obj.TERM_SN = #{termSn}
+            </if>
+            <if test="null !=dataTime">
+                AND obj.DATA_TIME = #{dataTime}
+            </if>
+            <!-- 根据时间条件 -->
+            <if test="null != startTime and ''!= startTime">
+                <![CDATA[
+                    AND obj.DATA_TIME >= #{startTime}
+                 ]]>
+            </if>
+            <!-- 根据结束时间条件 -->
+            <if test="null != endTime and ''!= endTime">
+                <![CDATA[
+                    AND obj.DATA_TIME <= #{endTime}
+                 ]]>
+            </if>
+        </trim>
+    </sql>
+<!--    <update id="updateRainHour" parameterType="com.hd.memcachedlearn.entity.RainHour">
+        UPDATE obj
+        SET obj.RAIN_VALUE = #{rainValue}
+        FROM BIZ_RAIN_HOUR  obj
+        WHERE obj.TERM_SN = #{termSn} AND obj.DATA_TIME = #{dataTime}
+    </update>
+    <insert id="insertRainHour" parameterType="com.hd.memcachedlearn.entity.RainHour"  useGeneratedKeys="true" keyProperty="">
+        IF NOT EXISTS(SELECT TERM_SN FROM BIZ_RAIN_HOUR WHERE TERM_SN=#{termSn} AND DATA_TIME=#{dataTime})
+            BEGIN
+                INSERT INTO BIZ_RAIN_HOUR (TERM_SN,DATA_TIME,RAIN_VALUE) 
+                VALUES(#{termSn},#{dataTime},#{rainValue})
+            END
+        ELSE
+            BEGIN
+                UPDATE BIZ_RAIN_HOUR SET RAIN_VALUE=#{rainValue}
+                WHERE TERM_SN=#{termSn} AND DATA_TIME=#{dataTime}
+            END
+    </insert>
+    <insert id="insertBatchSQL" parameterType="java.util.List">
+        MERGE INTO BIZ_RAIN_HOUR t 
+            using (values 
+           <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.termSn},#{item.dataTime},#{item.rainValue})
+        </foreach>
+            )as b(TERM_SN,DATA_TIME,RAIN_VALUE)
+            on (t.TERM_SN = b.TERM_SN AND t.DATA_TIME = b.DATA_TIME) 
+            when matched then 
+            UPDATE set t.RAIN_VALUE = b.RAIN_VALUE
+            when not matched then 
+            insert(TERM_SN,DATA_TIME,RAIN_VALUE) values(b.TERM_SN,b.DATA_TIME,b.RAIN_VALUE);
+    </insert>
+    <delete id="deleteRainHour" parameterType="com.hd.memcachedlearn.entity.RainHour">
+        DELETE obj FROM BIZ_RAIN_HOUR obj
+        <include refid="dy_where" />
+    </delete>
+    <delete id="deleteRainHourBySn" parameterType="java.lang.String">
+        DELETE obj FROM BIZ_RAIN_HOUR obj where obj.TERM_SN = #{termSn}
+    </delete>-->
+</mapper>
